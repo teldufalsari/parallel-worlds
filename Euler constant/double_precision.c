@@ -25,9 +25,9 @@ int main(int argc, char* argv[])
             return 1;
         }
         //Calculate sum from 1 to upper_limit
-        unsigned long upper_limit = 2 + N / comm_size; // Finding  upper_limit
-        int rem = upper_limit % comm_size;
-        if (rem > comm_size) {
+        unsigned long upper_limit = 1 + N / comm_size; // Finding  upper_limit
+        int rem = N % comm_size;
+        if (rem > comm_rank) {
             upper_limit += 1;
         }
         double accumulator = 1.0, term = 1.0; // Calculating the sum 1 + 1/(1!) + 1/(2!) +...
@@ -46,9 +46,9 @@ int main(int argc, char* argv[])
         // Recieve other cores' result
         MPI_Status status = {};
         for (int i = 1; i < comm_size; i++) {
-            state = MPI_Recv((void*)&(term), 1, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+            state = MPI_Recv((void*)&term, 1, MPI_DOUBLE, i, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
             if (state != MPI_SUCCESS) {
-                printf("Core Zer0: failed to recieve data from Core %d\nThe answer is probably incorrect\n");
+                printf("Core Zer0: failed to recieve data from Core %d\nThe answer is probably incorrect\n", i);
             }
             accumulator += term;
         }
