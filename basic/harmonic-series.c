@@ -22,9 +22,9 @@ int main(int argc, char* argv[])
             MPI_Finalize();
             return 1;
         }
-        unsigned long upper_limit = 2 + N / comm_size;
-        int rem = upper_limit % comm_size;
-        if (rem > comm_size) {
+        unsigned long upper_limit = 1 + N / comm_size;
+        int rem = N % comm_size;
+        if (rem > comm_rank) {
             upper_limit++;
         }
         double accumulator = 0.0;
