@@ -4,10 +4,28 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <mpfr.h>
+#include <math.h>
 
-#define DEFAULT_PRECISION  (mpfr_prec_t)512
 #define TAG_FOR_SIZES 1
 #define TAG_FOR_DATA 0
+
+unsigned long GetIterNumber(long N)
+{
+    mpfr_t rem_lagrange, term;
+    mpfr_init2(rem_lagrange, 64);
+    mpfr_init2(term, 64);
+    mpfr_set_ui(rem_lagrange, 10ul, MPFR_RNDN);
+    mpfr_pow_si(rem_lagrange, rem_lagrange, -N - 2l, MPFR_RNDN);
+    mpfr_set_d(term, 3.0 / 3628800.0, MPFR_RNDN); // approx (e / factorial 10)
+    unsigned long m = 10;
+    while (mpfr_cmp(term, rem_lagrange) > 0) {
+        m++;
+        mpfr_div_d(term, term, m, MPFR_RNDN);
+    }
+    mpfr_clear(rem_lagrange);
+    mpfr_clear(term);
+    return m;
+}
 
 size_t SerializeMPFR(mpfr_t number, char** buf_ptr)
 {
@@ -47,10 +65,11 @@ void SetLimits(
     }
 }
 
-int PerformForCoreZero(int comm_size, int comm_rank, unsigned long N)
+int PerformForCoreZero(int comm_size, int comm_rank, long ndigits)
 {   
-    printf("Calculating Euler's number with %ld significant digits...\n", N);
-    mpfr_set_default_prec(DEFAULT_PRECISION);
+    printf("Calculating Euler's number with %ld significant digits...\n", ndigits);
+    unsigned long N = GetIterNumber(ndigits);
+    mpfr_set_default_prec(1 + (long)(ndigits * log2(10)));
 
     //Calculate sum from 1 to upper_limit
     //## Subtask: find upper limit
@@ -124,14 +143,17 @@ int PerformForCoreZero(int comm_size, int comm_rank, unsigned long N)
     }
     // Print the answer
     puts("Core Zer0: Behold, answer:");
-    mpfr_out_str(stdout, 10, 0, accumulator, MPFR_RNDN);
+    mpfr_out_str(stdout, 10, ndigits, accumulator, MPFR_RNDN);
+    putchar('\n');
     mpfr_clear(accumulator);
     mpfr_clear(term);
 }
 
-int PerformForCoreN(int comm_size, int comm_rank, unsigned long N)
+int PerformForCoreN(int comm_size, int comm_rank, long ndigits)
 {
-    mpfr_set_default_prec(DEFAULT_PRECISION);
+    unsigned long N = GetIterNumber(ndigits);
+    mpfr_prec_t precision = 1 + (long)(ndigits * log2(10));
+    mpfr_set_default_prec(precision);
     // Calculate sum from lower_limit to upper_limit
     //## Subtask: find sum limits
     unsigned long lower_limit = 0, upper_limit = 0;
@@ -156,7 +178,7 @@ int PerformForCoreN(int comm_size, int comm_rank, unsigned long N)
     }
     //## Subtask: receive term from previous core
     mpfr_t prev_term;
-    mpfr_init2(prev_term, DEFAULT_PRECISION);
+    mpfr_init2(prev_term, precision);
     char* buf = (char*)calloc(buf_size, sizeof(char));
     state = MPI_Recv((void*)buf, buf_size, MPI_CHAR, comm_rank - 1, TAG_FOR_DATA, MPI_COMM_WORLD, &status);
     if (state != MPI_SUCCESS) {
