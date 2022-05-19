@@ -16,10 +16,14 @@ double f(double x)
     return sin(1 / x);
 }
 
-double GetStep(double x, double prec)
+double SecondDerivative(double x)
 {
-    (void)x;
-    return prec;
+    return (2 * cos(1 / x) - (1 / x) * sin(1 / x)) / (x * x * x);
+}
+
+double GetStep(double x, double base)
+{
+    return base / cbrt(fabs(SecondDerivative(x)));
 }
 
 double InegrateStep(double x, double step)
@@ -27,11 +31,13 @@ double InegrateStep(double x, double step)
     return 0.5 * step * (f(x) + f(x + step));
 }
 
+
+
 struct thread_arg {
     double* resptr_;
     double* x_;
     int* flag_;
-    double* precision_;
+    double* step_base_;
     double* up_limit_;
 };
 
@@ -40,7 +46,7 @@ void* thread_body(void* arg)
     double* resptr = ((struct thread_arg*)arg)->resptr_;
     double* xptr = ((struct thread_arg*)arg)->x_;
     int* flagptr = ((struct thread_arg*)arg)->flag_;
-    double precision = *(((struct thread_arg*)arg)->precision_);
+    double step_base = *(((struct thread_arg*)arg)->step_base_);
     double up_limit = *(((struct thread_arg*)arg)->up_limit_);
     double result = 0.0, step = 0.0, x = 0.0;
     while(1)
@@ -51,7 +57,7 @@ void* thread_body(void* arg)
             break;
         }
         x = *xptr;
-        step = GetStep(x, precision);
+        step = GetStep(x, step_base);
         if ((step + x) > up_limit) {
             step = up_limit - x;
             *flagptr = FLAG_FINISHED;
@@ -64,7 +70,7 @@ void* thread_body(void* arg)
     return NULL;
 }
 
-int ConvertInput(char* argv[], double* lo_limit, double* up_limit, unsigned* n_threads)
+int ConvertInput(char* argv[], double* lo_limit, double* up_limit, unsigned* n_threads, double* precision)
 {
     errno = 0;
     *lo_limit = strtod(argv[1], NULL);
@@ -79,18 +85,22 @@ int ConvertInput(char* argv[], double* lo_limit, double* up_limit, unsigned* n_t
     if (errno != 0) {
         return 1;
     }
+    *precision = strtod(argv[4], NULL);
+    if (errno != 0) {
+        return 1;
+    }
     return 0;
 }
 
 int main(int argc, char* argv[])
 {
-    if (argc != 4) {
+    if (argc != 5) {
         printf("Usage: %s <lower limit> <upper limit> <thread number>", argv[0]);
         return 0;
     }
     unsigned n_threads = 0;
-    double lo_limit = 0.0, up_limit = 0.0, precision = PRECISION;
-    if (ConvertInput(argv, &lo_limit, &up_limit, &n_threads) != 0) {
+    double lo_limit = 0.0, up_limit = 0.0, precision = 0.0;
+    if (ConvertInput(argv, &lo_limit, &up_limit, &n_threads, &precision) != 0) {
         puts("Invalid integration limits or thread count");
         return 1;
     }
@@ -102,17 +112,17 @@ int main(int argc, char* argv[])
         perror("Failed to init mutex");
         return 2;
     }
-
     double* results = (double*)calloc(n_threads, sizeof(double));
     pthread_t* workers = (pthread_t*)calloc(n_threads, sizeof(pthread_t));
     struct thread_arg* arguments = (struct thread_arg*)calloc(n_threads, sizeof(struct thread_arg));
     double x = lo_limit;
+    double step_base = cbrt(12 * precision);
     int flag = FLAG_CALCULATING;
     for (unsigned i = 0; i < n_threads; i++) {
         arguments[i].resptr_ = results + i;
         arguments[i].x_ = &x;
         arguments[i].flag_ = &flag;
-        arguments[i].precision_ = &precision;
+        arguments[i].step_base_ = &step_base;
         arguments[i].up_limit_ = &up_limit;
         if ((errno = pthread_create(workers + i, NULL, &thread_body, (void*)(arguments + i))) != 0) {
             perror("pthread: failed to create thread");
