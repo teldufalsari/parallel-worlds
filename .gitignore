@@ -1,0 +1,8 @@
+## VS Code
+.vscode
+
+## Misc
+*.exe
+*.pdf
+*.txt
+*.csv
