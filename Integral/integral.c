@@ -54,7 +54,7 @@ void* thread_body(void* arg)
     int* flagptr = ((struct thread_arg*)arg)->flag_;
     double step_base = *(((struct thread_arg*)arg)->step_base_);
     double up_limit = *(((struct thread_arg*)arg)->up_limit_);
-    double result = 0.0, step = 0.0, x = 0.0; // intermediate variables
+    double result = 0.0, step = 0.0, x = 0.0; // intermediate variables, 
     while(1)
     {
         pthread_mutex_lock(&mutex);
