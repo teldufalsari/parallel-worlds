@@ -8,7 +8,7 @@ CFLAGS += -Wwrite-strings -Wswitch-default -Wswitch-enum -Winit-self -Wcast-qual
 
 all: sum
 
-harmonic: sum.c
+sum: sum.c
 	${CC} ${CFLAGS} -fopenmp sum.c -o sum
 
 clean:
