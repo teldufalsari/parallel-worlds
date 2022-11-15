@@ -1,3 +1,8 @@
+/*
+ * This program finds number of prime numbers between 0 and N,
+ * where N is the first command line argument.
+ */
+
 #include "omp.h"
 #include <stdio.h>
 #include <math.h>
@@ -13,7 +18,7 @@ int is_prime(unsigned long N)
     return 1;
 }
 
-/// Returns primes count from 2 to N
+/// Returns prime numbers count between 0 and N
 unsigned primes_count(unsigned long N)
 {
     omp_lock_t lock;
