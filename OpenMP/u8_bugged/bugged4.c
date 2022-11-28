@@ -18,8 +18,8 @@ int main (int argc, char *argv[])
      * Матрица слишком большая для стека, выделим её в куче
      ****************/
     double* a = malloc(N * N * sizeof(double));
-
-    #pragma omp parallel shared(nthreads, a) private(i, j, tid) // a должна быть shared или firstprivate, иначе у потоков она инициализуется нулём
+    // a должна быть shared или firstprivate, иначе у потоков она инициализируется нулём
+    #pragma omp parallel shared(nthreads) firstprivate(a) private(i, j, tid)
     {
         tid = omp_get_thread_num();
         if (tid == 0) 
@@ -30,7 +30,7 @@ int main (int argc, char *argv[])
         printf("Thread %d starting...\n", tid);
         for (i = 0; i < N; i++)
             for (j = 0; j < N; j++)
-                *(a + N*i + j) = tid + i + j;
+                *(a + N*i + j) = tid + i + j; // пришлось поменять способ адресации
 
         printf("Thread %d done. Last element= %f\n", tid, *(a + (N-1)*N + N-1));
     }
